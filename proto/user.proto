@@ -1,0 +1,109 @@
+syntax = "proto3";
+package user;
+
+import "annotations.proto";
+
+// I added additional mappings to potentially use Google Cloud Endpoints
+// to run the HTTP API instead of Gin to get rid of the HTTP service and
+// have all of the controller logic in one place.
+import "http.proto";
+import "field_behavior.proto";
+
+option go_package = "src/api/generated";
+
+service UserService {
+
+  // Creates a user with the given parameters.
+  rpc CreateUser(CreateUserReq) returns (CreateUserResp) {
+    option (google.api.http) = {
+      post: "/user/create"
+      body: "*"
+    };
+  }
+
+  // Updates a single user.
+  rpc UpdateUser(UpdateUserReq) returns (UpdateUserResp) {
+    option (google.api.http) = {
+      put: "/user/{id}"
+      body: "*"
+    };
+  }
+
+  // Deletes a single user with the given UUID.
+  rpc DeleteUser(DeleteUserReq) returns (DeleteUserResp) {
+    option (google.api.http) = {
+      delete: "/user/{id}"
+    };
+  }
+
+  // Retrieves a single user with the given UUID.
+  rpc GetUser(GetUserReq) returns (GetUserResp) {
+    option (google.api.http) = {
+      get: "/user/{id}"
+    };
+  }
+
+  // Retrieves a paginated list of users in the database.
+  rpc GetUserList(GetUserListReq) returns (stream GetUserListResp) {
+    option (google.api.http) = {
+      get : "/user/"
+    };
+  }
+}
+
+message User {
+  string id = 1; // Decided to use string for simplicity, might be better to use bytes
+  string first_name = 2;
+  string last_name = 3;
+  string nickname = 4;
+  string password = 5;
+  string email = 6;
+  string country = 7;
+  string created_at = 8; // Decided to use string to avoid tracking timestamps in Go.
+  string updated_at = 9; // In a proper implementation this would be a timestamp though.
+}
+
+message CreateUserReq {
+    User user = 1;
+}
+
+message UpdateUserReq {
+    string id = 1;
+    User user = 2;
+}
+
+message DeleteUserReq {
+    string user_id = 1;
+}
+
+message GetUserReq {
+    string user_id = 1;
+}
+
+message GetUserListReq {
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // I decided against cursor based pagination to simplify the service,
+  // however, cursor based is the way to go.
+  int32 page_offset = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+
+message CreateUserResp {
+    User user = 1;
+}
+
+message UpdateUserResp {
+    User user = 1;
+}
+
+message DeleteUserResp {
+}
+
+message GetUserResp {
+    User user = 1;
+}
+
+message GetUserListResp {
+    User user = 1;
+}
