@@ -18,6 +18,8 @@ func main() {
 
 	rpcAddr := os.Getenv("RPC_ADDRESS")
 
+	redisEndpoint := os.Getenv("REDIS_ENDPOINT")
+
 	mongoEndpoint := os.Getenv("MONGO_ENDPOINT")
 	mongoDBName := os.Getenv("MONGO_DATABASE")
 	mongoCollectionName := os.Getenv("MONGO_COLLECTION")
@@ -26,26 +28,25 @@ func main() {
 	queryTimeoutSeconds, _ := strconv.Atoi(queryTimeoutSecondsStr)
 	queryTimeout := time.Second * time.Duration(queryTimeoutSeconds)
 
-	db := &storage.Mongo{
-		Endpoint:       mongoEndpoint,
-		DBName:         mongoDBName,
-		CollectionName: mongoCollectionName,
-		QueryTimeout:   queryTimeout,
-	}
-
+	db := storage.NewMongo(mongoEndpoint, mongoDBName, mongoCollectionName, queryTimeout)
 	err := db.Connect()
 	if err != nil {
 		panic(fmt.Errorf("rror initializing mongodb: %v", err))
 	}
 
+	pubSub := storage.NewRedis(redisEndpoint, queryTimeout) // Using same timeout for brevity
+	pubSub.Connect()
+
+	userService := api.NewUserService(db, pubSub)
+
 	gin.SetMode(gin.DebugMode) // Would have a check if this was ever deployed
 
-	httpRouter       := api.NewHttpRouter(db)
+	httpRouter       := api.NewHttpRouter(userService)
 
 	rpcListener, err := net.Listen("tcp", rpcAddr)
-	rpcServer        := api.NewRpcServer(db)
+	rpcServer        := api.NewRpcServer(userService)
 
 	go httpRouter.Engine.Run(httpAddr)
 	fmt.Printf("[gRPC] Listening and serving on %v", httpAddr)
-	rpcServer.Server.Serve(rpcListener)
+	go rpcServer.Server.Serve(rpcListener)
 }

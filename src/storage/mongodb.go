@@ -24,18 +24,27 @@ type Database interface {
 }
 
 type Mongo struct {
-	Endpoint       string
-	DBName         string
-	CollectionName string
-	QueryTimeout   time.Duration
+	endpoint       string
+	dbName         string
+	collectionName string
+	queryTimeout   time.Duration
 	client         *mongo.Client
 	collection     *mongo.Collection
+}
+
+func NewMongo(endpoint string, dbname string, collection string, timeout time.Duration) *Mongo {
+	return &Mongo{
+		endpoint:       endpoint,
+		dbName:         dbname,
+		collectionName: collection,
+		queryTimeout:   timeout,
+	}
 }
 
 func (m *Mongo) Connect() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.Endpoint))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.endpoint))
 	if err != nil {
 		return err
 	}
@@ -46,7 +55,7 @@ func (m *Mongo) Connect() error {
 		return err
 	}
 
-	m.collection = client.Database(m.DBName).Collection(m.CollectionName)
+	m.collection = client.Database(m.dbName).Collection(m.collectionName)
 	return nil
 }
 
@@ -63,7 +72,7 @@ func (m *Mongo) CreateUser(user *models.User) error {
 		println("shite")
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 	_, err = m.collection.InsertOne(ctx, bUser)
 	if err != nil {
@@ -73,7 +82,7 @@ func (m *Mongo) CreateUser(user *models.User) error {
 }
 
 func (m *Mongo) UpdateUser(user *models.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 	_, err := m.collection.UpdateOne(ctx, bson.M{"id": user.Id}, bson.M{"$set": user})
 	if err != nil {
@@ -83,7 +92,7 @@ func (m *Mongo) UpdateUser(user *models.User) error {
 }
 
 func (m *Mongo) DeleteUser(userID string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 	_, err := m.collection.DeleteOne(ctx, bson.M{"id": userID})
 	if err != nil {
@@ -93,7 +102,7 @@ func (m *Mongo) DeleteUser(userID string) error {
 }
 
 func (m *Mongo) GetUser(userID string) (user *models.User, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 	result := m.collection.FindOne(ctx, bson.M{"id": userID})
 	err = result.Decode(&user)
@@ -109,7 +118,7 @@ func (m *Mongo) GetUser(userID string) (user *models.User, err error) {
 }
 
 func (m *Mongo) GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 
 	opts := options.Find()

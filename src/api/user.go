@@ -11,7 +11,28 @@ import (
 
 // This is where our main business logic lives!
 
-func CreateUser(user *models.User, db storage.Database) (*models.User, error) {
+type IUserService interface {
+    CreateUser(user *models.User, db storage.Database, pubSub storage.PubSub) (*models.User, error)
+	UpdateUser(user *models.User, db storage.Database, pubSub storage.PubSub) (*models.User, error)
+	RemoveUser(userID string, db storage.Database, pubSub storage.PubSub) error
+	GetUser(userID string, db storage.Database) (user *models.User, err error)
+	GetUserList(limit int, offset int, filter map[string]string, db storage.Database) (users []*models.User, err error)
+}
+
+type UserService struct {
+    db storage.Database
+	pubSub storage.PubSub
+}
+
+func NewUserService(db storage.Database, pubSub storage.PubSub) *UserService {
+	return &UserService{
+		db:     db,
+		pubSub: pubSub,
+	}
+}
+
+
+func (us *UserService) CreateUser(user *models.User) (*models.User, error) {
 	user.Password = user.HashPassword(user.Password)
 	user.Id = uuid.New().String() // Generate a new UUID.
 	timestamp := user.GenerateTimestamp()
@@ -19,14 +40,19 @@ func CreateUser(user *models.User, db storage.Database) (*models.User, error) {
 	user.CreatedAt = timestamp
 	user.UpdatedAt = timestamp
 
-	err := db.CreateUser(user)
+	err := us.db.CreateUser(user)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
+	user, err = us.db.GetUser(user.Id) // Get updated timestamps.
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
 
-	user, err = db.GetUser(user.Id) // Get updated timestamps.
+	err = us.pubSub.PublishMessage(models.MessageUserCreated, user)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -35,8 +61,8 @@ func CreateUser(user *models.User, db storage.Database) (*models.User, error) {
 	return user, nil
 }
 
-func UpdateUser(user *models.User, db storage.Database) (*models.User, error) {
-	oldUser, err := GetUser(user.Id, db)
+func (us *UserService) UpdateUser(user *models.User) (*models.User, error) {
+	oldUser, err := us.GetUser(user.Id)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -53,13 +79,19 @@ func UpdateUser(user *models.User, db storage.Database) (*models.User, error) {
 		user.Password = user.HashPassword(user.Password) // I might move password updates to a separate endpoint to avoid this extra logic.
 	}
 
-	err = db.UpdateUser(user)
+	err = us.db.UpdateUser(user)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	user, err = GetUser(user.Id, db) // Update timestamps
+	user, err = us.GetUser(user.Id) // Update timestamps
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	err = us.pubSub.PublishMessage(models.MessageUserUpdated, user)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -68,29 +100,38 @@ func UpdateUser(user *models.User, db storage.Database) (*models.User, error) {
 	return user, nil
 }
 
-func RemoveUser(userID string, db storage.Database) error {
-	err := db.DeleteUser(userID)
+func (us *UserService) RemoveUser(userID string) error {
+	err := us.db.DeleteUser(userID)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+
+	err = us.pubSub.PublishMessage(models.MessageUserDeleted, &models.User{Id: userID})
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	return nil
 }
 
-func GetUser(userID string, db storage.Database) (user *models.User, err error){
-	user, err = db.GetUser(userID)
+func (us *UserService) GetUser(userID string) (user *models.User, err error) {
+	user, err = us.db.GetUser(userID)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 	return user, nil
 }
 
-func GetUsers(limit int, offset int, filter map[string]string, db storage.Database) (users []*models.User, err error) {
-	users, err = db.GetUserList(limit, offset, filter)
+func (us *UserService) GetUserList(limit int, offset int, filter map[string]string) (users []*models.User, err error) {
+	users, err = us.db.GetUserList(limit, offset, filter)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 	return users, nil
 }

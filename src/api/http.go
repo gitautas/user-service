@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"user-service/src/models"
-	"user-service/src/storage"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -16,16 +15,16 @@ import (
 
 type HttpRouter struct {
 	Engine *gin.Engine
-	db storage.Database
+	us *UserService
 }
 
 const PathPrefix = "/user"
 
-func NewHttpRouter(db storage.Database) *HttpRouter {
+func NewHttpRouter(userService *UserService) *HttpRouter {
 	engine := gin.Default()
 	hr := &HttpRouter{
 		Engine: engine,
-		db:  db,
+		us: userService,
 	}
 
 	corsConfig := cors.DefaultConfig()
@@ -56,7 +55,7 @@ func (hr *HttpRouter) createUserHandler(c *gin.Context) {
 	}
 
 
-	user, err = CreateUser(user, hr.db)
+	user, err = hr.us.CreateUser(user)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -78,7 +77,7 @@ func (hr *HttpRouter) updateUserHandler(c *gin.Context) {
 
 	user.Id = userID
 
-	user, err = UpdateUser(user, hr.db)
+	user, err = hr.us.UpdateUser(user)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -91,7 +90,7 @@ func (hr *HttpRouter) updateUserHandler(c *gin.Context) {
 func (hr *HttpRouter) removeUserHandler(c *gin.Context) {
 	userID := c.Param("userID")
 
-	err := RemoveUser(userID, hr.db)
+	err := hr.us.RemoveUser(userID)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -104,7 +103,7 @@ func (hr *HttpRouter) removeUserHandler(c *gin.Context) {
 func (hr *HttpRouter) getUserHandler(c *gin.Context) {
 	userID := c.Param("userID")
 
-	user, err := GetUser(userID, hr.db)
+	user, err := hr.us.GetUser(userID)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -135,7 +134,7 @@ func (hr *HttpRouter) getUsersHandler(c *gin.Context) {
 	delete(params, "limit")
 	delete(params, "skip")
 
-	users, err := GetUsers(limit, skip, params, hr.db)
+	users, err := hr.us.GetUserList(limit, skip, params)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return

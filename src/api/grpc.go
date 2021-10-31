@@ -4,23 +4,22 @@ import (
 	"context"
 	"user-service/src/api/generated"
 	"user-service/src/models"
-	"user-service/src/storage"
 
 	"google.golang.org/grpc"
 )
 
 type RpcServer struct {
 	Server *grpc.Server
-	db storage.Database
+	us *UserService
 	generated.UnimplementedUserServiceServer
 }
 
-func NewRpcServer(db storage.Database) *RpcServer {
+func NewRpcServer(userService *UserService) *RpcServer {
 	server := grpc.NewServer()
 
 	rpcServer := &RpcServer{
 		Server: server,
-		db:  db,
+		us: userService,
 	}
 
 	server.RegisterService(&generated.UserService_ServiceDesc, rpcServer)
@@ -28,7 +27,7 @@ func NewRpcServer(db storage.Database) *RpcServer {
 }
 
 func (rs *RpcServer) CreateUser(ctx context.Context, req *generated.CreateUserReq) (*generated.CreateUserResp, error) {
-	user, err := CreateUser((*models.User)(req.User), rs.db)
+	user, err := rs.us.CreateUser((*models.User)(req.User))
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +38,7 @@ func (rs *RpcServer) CreateUser(ctx context.Context, req *generated.CreateUserRe
 }
 
 func (rs *RpcServer) UpdateUser(ctx context.Context, req *generated.UpdateUserReq) (*generated.UpdateUserResp, error) {
-	user, err := UpdateUser((*models.User)(req.User), rs.db)
+	user, err := rs.us.UpdateUser((*models.User)(req.User))
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +49,7 @@ func (rs *RpcServer) UpdateUser(ctx context.Context, req *generated.UpdateUserRe
 }
 
 func (rs *RpcServer) DeleteUser(ctx context.Context, req *generated.DeleteUserReq) (*generated.DeleteUserResp, error) {
-	err := RemoveUser(req.UserId, rs.db)
+	err := rs.us.RemoveUser(req.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +58,7 @@ func (rs *RpcServer) DeleteUser(ctx context.Context, req *generated.DeleteUserRe
 }
 
 func (rs *RpcServer) GetUser(ctx context.Context, req *generated.GetUserReq) (*generated.GetUserResp, error) {
-	user, err := GetUser(req.UserId, rs.db)
+	user, err := rs.us.GetUser(req.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +69,7 @@ func (rs *RpcServer) GetUser(ctx context.Context, req *generated.GetUserReq) (*g
 }
 
 func (rs *RpcServer) GetUserList(req *generated.GetUserListReq, stream generated.UserService_GetUserListServer) (error) {
-	users, err := GetUsers(int(req.Limit), int(req.Skip), req.Filter, rs.db)
+	users, err := rs.us.GetUserList(int(req.Limit), int(req.Skip), req.Filter)
 	if err != nil {
 		return err
 	}
