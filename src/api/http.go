@@ -115,8 +115,12 @@ func (hr *HttpRouter) getUserHandler(c *gin.Context) {
 }
 
 func (hr *HttpRouter) getUsersHandler(c *gin.Context) {
-	params := c.QueryMap("")
-
+	params := make(map[string]string)
+	for key, value := range c.Request.URL.Query() {
+		// This is an ugly solution because it means that only the first value of a filter
+		// Might come up with a better solution later down the line.
+		params[key] = value[0]
+	}
 	// This is inefficient since I already have these values inside
 	// the params variabe, but this is a much more graceful way to handle defaults.
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -130,7 +134,6 @@ func (hr *HttpRouter) getUsersHandler(c *gin.Context) {
 
 	delete(params, "limit")
 	delete(params, "skip")
-
 
 	users, err := GetUsers(limit, skip, params, hr.db)
 	if err != nil {

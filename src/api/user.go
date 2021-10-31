@@ -14,11 +14,17 @@ import (
 func CreateUser(user *models.User, db storage.Database) (*models.User, error) {
 	user.Password = user.HashPassword(user.Password)
 	user.Id = uuid.New().String() // Generate a new UUID.
+	timestamp := user.GenerateTimestamp()
+
+	user.CreatedAt = timestamp
+	user.UpdatedAt = timestamp
+
 	err := db.CreateUser(user)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 
 	user, err = db.GetUser(user.Id) // Get updated timestamps.
 	if err != nil {
@@ -35,6 +41,9 @@ func UpdateUser(user *models.User, db storage.Database) (*models.User, error) {
 		log.Println(err)
 		return nil, err
 	}
+
+	user.CreatedAt = oldUser.CreatedAt
+	user.CreatedAt = user.GenerateTimestamp()
 
 	if oldUser == nil {
 		return nil, errors.New("user not found")

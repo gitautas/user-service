@@ -35,7 +35,7 @@ func main() {
 
 	err := db.Connect()
 	if err != nil {
-		panic(fmt.Errorf("error initializing mongodb: %v", err))
+		panic(fmt.Errorf("rror initializing mongodb: %v", err))
 	}
 
 	gin.SetMode(gin.DebugMode) // Would have a check if this was ever deployed

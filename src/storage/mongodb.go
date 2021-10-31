@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
-	"log"
+	"fmt"
 	"time"
 	"user-service/src/models"
 
@@ -37,14 +37,12 @@ func (m *Mongo) Connect() error {
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.Endpoint))
 	if err != nil {
-		log.Printf("Could not connect to MongoDB instance: %v", err)
 		return err
 	}
 
 	m.client = client
 	err = m.client.Ping(ctx, readpref.Primary()) // Establish and check connection
 	if err != nil {
-		log.Printf("Could not verify connection to MongoDB instance: %v", err)
 		return err
 	}
 
@@ -54,67 +52,52 @@ func (m *Mongo) Connect() error {
 
 func (m *Mongo) Disconnect() error {
 	if m.client != nil {
-		log.Println("Disconnecting from MongoDB")
 		return m.client.Disconnect(context.TODO())
 	}
 	return nil
 }
 
 func (m *Mongo) CreateUser(user *models.User) error {
-	user.CreatedAt = time.Now().UTC().Format(time.RFC3339)
-	user.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-
 	bUser, err := bson.Marshal(user)
 	if err != nil {
-		log.Println(err)
+		println("shite")
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
 	_, err = m.collection.InsertOne(ctx, bUser)
 	if err != nil {
-		log.Printf("Could not create document: %v", err)
 		return err
 	}
 	return nil
 }
 
 func (m *Mongo) UpdateUser(user *models.User) error {
-	user.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-
-	bUser, err := bson.Marshal(user)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
-	_, err = m.collection.UpdateOne(ctx, bson.M{"id": user.Id}, bUser)
+	_, err := m.collection.UpdateOne(ctx, bson.M{"id": user.Id}, bson.M{"$set": user})
 	if err != nil {
-		log.Printf("Could not update document: %v", err)
 		return err
 	}
 	return nil
 }
 
 func (m *Mongo) DeleteUser(userID string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
 	_, err := m.collection.DeleteOne(ctx, bson.M{"id": userID})
 	if err != nil {
-		log.Printf("Could not delete document: %v", err)
 		return err
 	}
 	return nil
 }
 
 func (m *Mongo) GetUser(userID string) (user *models.User, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
 	result := m.collection.FindOne(ctx, bson.M{"id": userID})
 	err = result.Decode(&user)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 
@@ -126,7 +109,7 @@ func (m *Mongo) GetUser(userID string) (user *models.User, err error) {
 }
 
 func (m *Mongo) GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
 
 	opts := options.Find()
@@ -138,9 +121,10 @@ func (m *Mongo) GetUserList(limit int, skip int, filter map[string]string) (user
 		bFilter[key] = value
 	}
 
+	fmt.Println(bFilter)
+
 	cur, err := m.collection.Find(ctx, bFilter, opts)
 	if err != nil {
-		log.Printf("Could not find documents: %v", err)
 		return nil, err
 	}
 
@@ -148,10 +132,13 @@ func (m *Mongo) GetUserList(limit int, skip int, filter map[string]string) (user
 		var user *models.User
 		err = cur.Decode(&user)
 		if err != nil {
-			log.Println(err)
 			return nil, err
 		}
 		users = append(users, user)
+	}
+
+	if len(users) == 0 {
+		return []*models.User{}, nil
 	}
 
 	return users, err

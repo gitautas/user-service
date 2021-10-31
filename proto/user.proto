@@ -8,6 +8,8 @@ import "annotations.proto";
 // have all of the controller logic in one place.
 import "http.proto";
 import "field_behavior.proto";
+import "gogo.proto";
+
 
 option go_package = "src/api/generated";
 
@@ -52,15 +54,16 @@ service UserService {
 }
 
 message User {
-  string id = 1; // Decided to use string for simplicity, might be better to use bytes
-  string first_name = 2;
-  string last_name = 3;
-  string nickname = 4;
-  string password = 5;
-  string email = 6;
-  string country = 7;
-  string created_at = 8; // Decided to use string to avoid tracking timestamps in Go.
-  string updated_at = 9; // In a proper implementation this would be a timestamp though.
+  string id = 1 [(gogoproto.moretags) = "bson:\"id\""];
+  // Decided to use string for simplicity, might be better to use bytes
+  string first_name = 2 [(gogoproto.moretags) = "bson:\"first_name\""];
+  string last_name = 3 [(gogoproto.moretags) = "bson:\"last_name\""];
+  string nickname = 4 [(gogoproto.moretags) = "bson:\"nickname\""];
+  string password = 5 [(gogoproto.moretags) = "bson:\"password\""];
+  string email = 6 [(gogoproto.moretags) = "bson:\"email\""];
+  string country = 7 [(gogoproto.moretags) = "bson:\"country\""];
+  string created_at = 8 [(gogoproto.moretags) = "bson:\"created_at\""]; // Decided to use string to avoid tracking timestamps in Go.
+  string updated_at = 9 [(gogoproto.moretags) = "bson:\"updated_at\""]; // In a proper implementation this would be a timestamp though.
 }
 
 message CreateUserReq {
@@ -87,7 +90,7 @@ message GetUserListReq {
   // however, cursor based is the way to go.
   int32 skip = 2 [(google.api.field_behavior) = OPTIONAL];
 
-  map<string, string> filter = 3;
+  map<string, string> filter = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 
