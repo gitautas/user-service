@@ -19,7 +19,7 @@ type Database interface {
 	CreateUser(user *models.User) error
 	UpdateUser(user *models.User) error
 	DeleteUser(userID string) error
-	GetUser(userID string) (file *models.User, err error)
+	GetUser(userID string) (user *models.User, err error)
 	GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, err error)
 }
 
