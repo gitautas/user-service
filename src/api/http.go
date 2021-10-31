@@ -10,23 +10,22 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // Not handling auth or resource checking as per requirements.
 
 type HttpRouter struct {
 	Engine *gin.Engine
-	mysql storage.Database
+	db storage.Database
 }
 
 const PathPrefix = "/user"
 
-func NewHttpRouter(mysql storage.Database) *HttpRouter {
+func NewHttpRouter(db storage.Database) *HttpRouter {
 	engine := gin.Default()
 	hr := &HttpRouter{
 		Engine: engine,
-		mysql:  mysql,
+		db:  db,
 	}
 
 	corsConfig := cors.DefaultConfig()
@@ -57,7 +56,7 @@ func (hr *HttpRouter) createUserHandler(c *gin.Context) {
 	}
 
 
-	user, err = CreateUser(user, hr.mysql)
+	user, err = CreateUser(user, hr.db)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -69,17 +68,17 @@ func (hr *HttpRouter) createUserHandler(c *gin.Context) {
 
 func (hr *HttpRouter) updateUserHandler(c *gin.Context) {
 	var user *models.User
-	userID, err := uuid.Parse(c.Param("userID")) // Extra check for valid UUID.
+	userID := c.Param("userID")
 
-	err = c.BindJSON(&user)
+	err := c.BindJSON(&user)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	user.ID = userID.String()
+	user.Id = userID
 
-	user, err = UpdateUser(user, hr.mysql)
+	user, err = UpdateUser(user, hr.db)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -90,13 +89,9 @@ func (hr *HttpRouter) updateUserHandler(c *gin.Context) {
 }
 
 func (hr *HttpRouter) removeUserHandler(c *gin.Context) {
-	userID, err := uuid.Parse(c.Param("userID"))
-	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
+	userID := c.Param("userID")
 
-	err = RemoveUser(userID.String(), hr.mysql)
+	err := RemoveUser(userID, hr.db)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -107,13 +102,9 @@ func (hr *HttpRouter) removeUserHandler(c *gin.Context) {
 }
 
 func (hr *HttpRouter) getUserHandler(c *gin.Context) {
-	userID, err := uuid.Parse(c.Param("userID"))
-	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
+	userID := c.Param("userID")
 
-	user, err := GetUser(userID.String(), hr.mysql)
+	user, err := GetUser(userID, hr.db)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -124,16 +115,24 @@ func (hr *HttpRouter) getUserHandler(c *gin.Context) {
 }
 
 func (hr *HttpRouter) getUsersHandler(c *gin.Context) {
+	params := c.QueryMap("")
+
+	// This is inefficient since I already have these values inside
+	// the params variabe, but this is a much more graceful way to handle defaults.
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
-	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	skip, err := strconv.Atoi(c.DefaultQuery("skip", "0"))
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
 
-	users, err := GetUsers(limit, offset, hr.mysql)
+	delete(params, "limit")
+	delete(params, "skip")
+
+
+	users, err := GetUsers(limit, skip, params, hr.db)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return

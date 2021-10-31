@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"user-service/src/api/generated"
 	"user-service/src/models"
 	"user-service/src/storage"
@@ -10,36 +11,46 @@ import (
 
 type RpcServer struct {
 	Server *grpc.Server
-	mysql storage.Database
+	db storage.Database
+	generated.UnimplementedUserServiceServer
 }
 
-func NewRpcServer(mysql storage.Database) *RpcServer {
+func NewRpcServer(db storage.Database) *RpcServer {
 	server := grpc.NewServer()
 
-	return &RpcServer{
+	rpcServer := &RpcServer{
 		Server: server,
-		mysql:  mysql,
+		db:  db,
 	}
+
+	server.RegisterService(&generated.UserService_ServiceDesc, rpcServer)
+	return rpcServer
 }
 
-func (rs *RpcServer) CreateUser(req *generated.CreateUserReq) (*generated.CreateUserResp, error) {
-	user, err := CreateUser(models.FromRPC(req.User), rs.mysql)
+func (rs *RpcServer) CreateUser(ctx context.Context, req *generated.CreateUserReq) (*generated.CreateUserResp, error) {
+	user, err := CreateUser((*models.User)(req.User), rs.db)
+	if err != nil {
+		return nil, err
+	}
 
 	return &generated.CreateUserResp{
-		User: user.ToRPC(),
-	}, err
+		User: (*generated.User)(user),
+	}, nil
 }
 
-func (rs *RpcServer) UpdateUser(req *generated.UpdateUserReq) (*generated.UpdateUserResp, error) {
-	user, err := UpdateUser(models.FromRPC(req.User), rs.mysql)
+func (rs *RpcServer) UpdateUser(ctx context.Context, req *generated.UpdateUserReq) (*generated.UpdateUserResp, error) {
+	user, err := UpdateUser((*models.User)(req.User), rs.db)
+	if err != nil {
+		return nil, err
+	}
 
 	return &generated.UpdateUserResp{
-		User: user.ToRPC(),
-	}, err
+		User: (*generated.User)(user),
+	}, nil
 }
 
-func (rs *RpcServer) DeleteUser(req *generated.DeleteUserReq) (*generated.DeleteUserResp, error) {
-	err := RemoveUser(req.UserId, rs.mysql)
+func (rs *RpcServer) DeleteUser(ctx context.Context, req *generated.DeleteUserReq) (*generated.DeleteUserResp, error) {
+	err := RemoveUser(req.UserId, rs.db)
 	if err != nil {
 		return nil, err
 	}
@@ -47,29 +58,28 @@ func (rs *RpcServer) DeleteUser(req *generated.DeleteUserReq) (*generated.Delete
 	return &generated.DeleteUserResp{}, nil
 }
 
-func (rs *RpcServer) GetUser(req *generated.GetUserReq) (*generated.GetUserResp, error) {
-	user, err := GetUser(req.UserId, rs.mysql)
+func (rs *RpcServer) GetUser(ctx context.Context, req *generated.GetUserReq) (*generated.GetUserResp, error) {
+	user, err := GetUser(req.UserId, rs.db)
 	if err != nil {
 		return nil, err
 	}
 
-	return &generated.GetUserResp{ // I could simplify these models, but this makes for more readable proto files.
-		User: user.ToRPC(),
+	return &generated.GetUserResp{
+		User: (*generated.User)(user),
 	}, nil
 }
 
 func (rs *RpcServer) GetUserList(req *generated.GetUserListReq, stream generated.UserService_GetUserListServer) (error) {
-	users, err := GetUsers(int(req.PageSize), int(req.PageOffset), rs.mysql)
+	users, err := GetUsers(int(req.Limit), int(req.Skip), req.Filter, rs.db)
 	if err != nil {
 		return err
 	}
 
 	for _, user := range(users) {
 		err = stream.Send(&generated.GetUserListResp{
-			User: user.ToRPC(),
+			User: (*generated.User)(user),
 		})
 	}
 
 	return nil
-
 }

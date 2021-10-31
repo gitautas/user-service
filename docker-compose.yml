@@ -1,12 +1,12 @@
 version: "3"
 services:
   db:
-    image: mysql:5.7
+    image: mongo
     ports:
-      - 33060:3306
+      - 27017:27017
     environment:
-      MYSQL_ROOT_PASSWORD: test
-      MYSQL_DATABASE: faceit
+      - MONGO_INITDB_DATABASE=${MONGO_DATABASE}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
     volumes:
-      - ./faceit.sql:/docker-entrypoint-initdb.d/faceit.sql
-
+      - ./db/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro

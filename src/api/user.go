@@ -2,7 +2,7 @@ package api
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"user-service/src/models"
 	"user-service/src/storage"
 
@@ -11,37 +11,32 @@ import (
 
 // This is where our main business logic lives!
 
-func CreateUser(user *models.User, mysql storage.Database) (*models.User, error) {
+func CreateUser(user *models.User, db storage.Database) (*models.User, error) {
 	user.Password = user.HashPassword(user.Password)
-	user.ID = uuid.New().String() // Generate a new UUID.
-	err := mysql.CreateUser(user)
+	user.Id = uuid.New().String() // Generate a new UUID.
+	err := db.CreateUser(user)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
-	user, err = mysql.GetUser(user.ID) // Get updated timestamps.
+	user, err = db.GetUser(user.Id) // Get updated timestamps.
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
 	return user, nil
-	// I could return the function here, but because this is
-	// where any additional logic would be placed in
-	// any more complex service, therefore I choose to
-	// keep the additional lines here in these service functions.
-	//
-	// return mysql.CreateUser(user)
 }
 
-func UpdateUser(user *models.User, mysql storage.Database) (*models.User, error) {
-	oldUser, err := GetUser(user.ID, mysql)
+func UpdateUser(user *models.User, db storage.Database) (*models.User, error) {
+	oldUser, err := GetUser(user.Id, db)
 	if err != nil {
-		fmt.Println(err) // FIXME
+		log.Println(err)
 		return nil, err
 	}
 
 	if oldUser == nil {
-		fmt.Println("notfound") // FIXME
 		return nil, errors.New("user not found")
 	}
 
@@ -49,43 +44,43 @@ func UpdateUser(user *models.User, mysql storage.Database) (*models.User, error)
 		user.Password = user.HashPassword(user.Password) // I might move password updates to a separate endpoint to avoid this extra logic.
 	}
 
-	err = mysql.UpdateUser(user)
+	err = db.UpdateUser(user)
 	if err != nil {
-		fmt.Println(err) // FIXME
+		log.Println(err)
 		return nil, err
 	}
 
-	user, err = GetUser(user.ID, mysql) // Update timestamps
+	user, err = GetUser(user.Id, db) // Update timestamps
 	if err != nil {
-		fmt.Println(err) // FIXME
+		log.Println(err)
 		return nil, err
 	}
 
 	return user, nil
 }
 
-func RemoveUser(userID string, mysql storage.Database) error {
-	err := mysql.RemoveUser(userID)
+func RemoveUser(userID string, db storage.Database) error {
+	err := db.DeleteUser(userID)
 	if err != nil {
-		fmt.Println(err) // FIXME
+		log.Println(err)
 		return err
 	}
 	return nil
 }
 
-func GetUser(userID string, mysql storage.Database) (user *models.User, err error){
-	user, err = mysql.GetUser(userID)
+func GetUser(userID string, db storage.Database) (user *models.User, err error){
+	user, err = db.GetUser(userID)
 	if err != nil {
-		fmt.Println(err) // FIXME
+		log.Println(err)
 		return nil, err
 	}
 	return user, nil
 }
 
-func GetUsers(limit int, offset int, mysql storage.Database) (users []*models.User, err error) {
-	users, err = mysql.GetUsers(limit, offset)
+func GetUsers(limit int, offset int, filter map[string]string, db storage.Database) (users []*models.User, err error) {
+	users, err = db.GetUserList(limit, offset, filter)
 	if err != nil {
-		fmt.Println(err) // FIXME
+		log.Println(err)
 		return nil, err
 	}
 	return users, nil

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
+	"time"
 	"user-service/src/api"
 	"user-service/src/storage"
 
@@ -16,31 +18,34 @@ func main() {
 
 	rpcAddr := os.Getenv("RPC_ADDRESS")
 
-	sqlUsername := os.Getenv("SQL_USERNAME")
-	sqlPassword := os.Getenv("SQL_PASSWORD")
-	sqlEndpoint := os.Getenv("SQL_ENDPOINT")
-	sqlDBName := os.Getenv("SQL_DATABASE")
+	mongoEndpoint := os.Getenv("MONGO_ENDPOINT")
+	mongoDBName := os.Getenv("MONGO_DATABASE")
+	mongoCollectionName := os.Getenv("MONGO_COLLECTION")
+	queryTimeoutSecondsStr := os.Getenv("MONGO_TIMEOUT")
 
-	mysql := storage.Mysql{
-		UserName:     sqlUsername,
-		Password:     sqlPassword,
-		Endpoint:     sqlEndpoint,
-		DatabaseName: sqlDBName,
+	queryTimeoutSeconds, _ := strconv.Atoi(queryTimeoutSecondsStr)
+	queryTimeout := time.Second * time.Duration(queryTimeoutSeconds)
+
+	db := &storage.Mongo{
+		Endpoint:       mongoEndpoint,
+		DBName:         mongoDBName,
+		CollectionName: mongoCollectionName,
+		QueryTimeout:   queryTimeout,
 	}
 
-	err := mysql.Connect()
+	err := db.Connect()
 	if err != nil {
-		panic(fmt.Errorf("error initializing mysql: %v", err))
+		panic(fmt.Errorf("error initializing mongodb: %v", err))
 	}
 
 	gin.SetMode(gin.DebugMode) // Would have a check if this was ever deployed
 
-	httpRouter       := api.NewHttpRouter(&mysql)
+	httpRouter       := api.NewHttpRouter(db)
 
 	rpcListener, err := net.Listen("tcp", rpcAddr)
-	rpcServer        := api.NewRpcServer(&mysql)
+	rpcServer        := api.NewRpcServer(db)
 
 	go httpRouter.Engine.Run(httpAddr)
-	fmt.Printf("[gRPC] Listening and serving on %v", httpAddr) //FIXME
+	fmt.Printf("[gRPC] Listening and serving on %v", httpAddr)
 	rpcServer.Server.Serve(rpcListener)
 }

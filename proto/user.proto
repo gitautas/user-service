@@ -68,7 +68,7 @@ message CreateUserReq {
 }
 
 message UpdateUserReq {
-    string id = 1;
+    string user_id = 1;
     User user = 2;
 }
 
@@ -81,11 +81,13 @@ message GetUserReq {
 }
 
 message GetUserListReq {
-  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  int32 limit = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // I decided against cursor based pagination to simplify the service,
   // however, cursor based is the way to go.
-  int32 page_offset = 2 [(google.api.field_behavior) = OPTIONAL];
+  int32 skip = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  map<string, string> filter = 3;
 }
 
 
