@@ -2,7 +2,10 @@ package api
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"user-service/src/api/generated"
+	"user-service/src/api/health"
 	"user-service/src/models"
 
 	"google.golang.org/grpc"
@@ -12,18 +15,34 @@ type RpcServer struct {
 	Server *grpc.Server
 	us *UserService
 	generated.UnimplementedUserServiceServer
+	healthChannel chan health.HealthCheckResponse_ServingStatus
 }
 
-func NewRpcServer(userService *UserService) *RpcServer {
+func NewRpcServer(userService *UserService, healthChan chan health.HealthCheckResponse_ServingStatus) *RpcServer {
 	server := grpc.NewServer()
 
 	rpcServer := &RpcServer{
 		Server: server,
 		us: userService,
+		healthChannel: healthChan,
 	}
 
 	server.RegisterService(&generated.UserService_ServiceDesc, rpcServer)
 	return rpcServer
+}
+
+func (rs *RpcServer) Connect(addr string) {
+	fmt.Printf("[gRPC] Listening and serving on %s\n", addr)
+	rpcListener, err := net.Listen("tcp", addr)
+	if err != nil {
+		rs.healthChannel <- health.HealthCheckResponse_NOT_SERVING
+		panic("Could not start gRPC listener.")
+	}
+	err = rs.Server.Serve(rpcListener)
+	if err != nil {
+		rs.healthChannel <- health.HealthCheckResponse_NOT_SERVING
+		panic("Could not start gRPC listener.")
+	}
 }
 
 func (rs *RpcServer) CreateUser(ctx context.Context, req *generated.CreateUserReq) (*generated.CreateUserResp, error) {

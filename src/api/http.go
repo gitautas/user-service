@@ -2,9 +2,10 @@
 package api
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"user-service/src/api/health"
 	"user-service/src/models"
 
 	"github.com/gin-contrib/cors"
@@ -15,16 +16,19 @@ import (
 
 type HttpRouter struct {
 	Engine *gin.Engine
+	Address string
+	healthChannel chan health.HealthCheckResponse_ServingStatus
 	us *UserService
 }
 
 const PathPrefix = "/user"
 
-func NewHttpRouter(userService *UserService) *HttpRouter {
+func NewHttpRouter(userService *UserService, healthChan chan health.HealthCheckResponse_ServingStatus) *HttpRouter {
 	engine := gin.Default()
 	hr := &HttpRouter{
 		Engine: engine,
 		us: userService,
+		healthChannel: healthChan,
 	}
 
 	corsConfig := cors.DefaultConfig()
@@ -41,7 +45,20 @@ func NewHttpRouter(userService *UserService) *HttpRouter {
 	group.GET("/:userID", hr.getUserHandler)
 	group.GET("/", hr.getUsersHandler)
 
+	group.GET("/ping", func(c *gin.Context) {
+		c.Status(200)
+	}) // Health check handler
+
 	return hr
+}
+
+func (hr *HttpRouter) Connect(addr string) {
+	hr.Address = addr
+	err := hr.Engine.Run(addr)
+	if err != nil {
+		hr.healthChannel <- health.HealthCheckResponse_NOT_SERVING
+		panic("Could not start HTTP listener.")
+	}
 }
 
 func (hr *HttpRouter) createUserHandler(c *gin.Context) {
@@ -49,7 +66,7 @@ func (hr *HttpRouter) createUserHandler(c *gin.Context) {
 
 	err := c.BindJSON(&user)
 	if err != nil {
-		fmt.Println(err) // FIXME
+		log.Println(err)
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"time"
@@ -14,19 +13,21 @@ import (
 
 func main() {
 	// Using environment variables for simplicity, would use a config file instead.
+
 	httpAddr := os.Getenv("HTTP_ADDRESS") // Would also add checks for values but omitted for brevity.
-
 	rpcAddr := os.Getenv("RPC_ADDRESS")
-
+	healthAddr := os.Getenv("HEALTH_ADDRESS")
 	redisEndpoint := os.Getenv("REDIS_ENDPOINT")
-
 	mongoEndpoint := os.Getenv("MONGO_ENDPOINT")
 	mongoDBName := os.Getenv("MONGO_DATABASE")
 	mongoCollectionName := os.Getenv("MONGO_COLLECTION")
 	queryTimeoutSecondsStr := os.Getenv("MONGO_TIMEOUT")
-
 	queryTimeoutSeconds, _ := strconv.Atoi(queryTimeoutSecondsStr)
 	queryTimeout := time.Second * time.Duration(queryTimeoutSeconds)
+
+	gin.SetMode(gin.DebugMode) // Would have a check if this was ever deployed
+
+	healthServer := api.NewHealthServer()
 
 	db := storage.NewMongo(mongoEndpoint, mongoDBName, mongoCollectionName, queryTimeout)
 	err := db.Connect()
@@ -39,14 +40,12 @@ func main() {
 
 	userService := api.NewUserService(db, pubSub)
 
-	gin.SetMode(gin.DebugMode) // Would have a check if this was ever deployed
+	httpRouter       := api.NewHttpRouter(userService, healthServer.HealthChan)
+	rpcServer        := api.NewRpcServer(userService, healthServer.HealthChan)
 
-	httpRouter       := api.NewHttpRouter(userService)
+	go httpRouter.Connect(httpAddr)
+	go rpcServer.Connect(rpcAddr)
 
-	rpcListener, err := net.Listen("tcp", rpcAddr)
-	rpcServer        := api.NewRpcServer(userService)
-
-	go httpRouter.Engine.Run(httpAddr)
-	fmt.Printf("[gRPC] Listening and serving on %v", httpAddr)
-	go rpcServer.Server.Serve(rpcListener)
+	healthServer.StateServing()
+	healthServer.Connect(healthAddr)
 }
