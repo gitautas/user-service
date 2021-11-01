@@ -2,7 +2,6 @@ package api
 
 import (
 	"log"
-	"net/http"
 	"user-service/src/models"
 	"user-service/src/storage"
 
@@ -64,10 +63,6 @@ func (us *UserService) UpdateUser(user *models.User) (*models.User, *models.Stat
 
 	user.CreatedAt = oldUser.CreatedAt
 	user.UpdatedAt = user.GenerateTimestamp()
-
-	if oldUser == nil {
-		return nil, models.NewStatus(http.StatusNotFound, "user not found")
-	}
 
 	if user.Password != oldUser.Password {
 		user.Password = user.HashPassword(user.Password)
