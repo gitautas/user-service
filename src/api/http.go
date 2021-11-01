@@ -72,9 +72,9 @@ func (hr *HttpRouter) createUserHandler(c *gin.Context) {
 	}
 
 
-	user, err = hr.us.CreateUser(user)
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+	user, status := hr.us.CreateUser(user)
+	if status != nil {
+		c.AbortWithStatusJSON(int(status.Code), status.Message)
 		return
 	}
 
@@ -94,9 +94,9 @@ func (hr *HttpRouter) updateUserHandler(c *gin.Context) {
 
 	user.Id = userID
 
-	user, err = hr.us.UpdateUser(user)
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+	user, status := hr.us.UpdateUser(user)
+	if status != nil {
+		c.AbortWithStatusJSON(int(status.Code), status.Message)
 		return
 	}
 
@@ -107,9 +107,9 @@ func (hr *HttpRouter) updateUserHandler(c *gin.Context) {
 func (hr *HttpRouter) removeUserHandler(c *gin.Context) {
 	userID := c.Param("userID")
 
-	err := hr.us.RemoveUser(userID)
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+	status := hr.us.RemoveUser(userID)
+	if status != nil {
+		c.AbortWithStatusJSON(int(status.Code), status.Message)
 		return
 	}
 
@@ -120,9 +120,9 @@ func (hr *HttpRouter) removeUserHandler(c *gin.Context) {
 func (hr *HttpRouter) getUserHandler(c *gin.Context) {
 	userID := c.Param("userID")
 
-	user, err := hr.us.GetUser(userID)
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+	user, status := hr.us.GetUser(userID)
+	if status != nil {
+		c.AbortWithStatusJSON(int(status.Code), status.Message)
 		return
 	}
 
@@ -151,9 +151,9 @@ func (hr *HttpRouter) getUsersHandler(c *gin.Context) {
 	delete(params, "limit")
 	delete(params, "skip")
 
-	users, err := hr.us.GetUserList(limit, skip, params)
+	users, status := hr.us.GetUserList(limit, skip, params)
 	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		c.AbortWithStatusJSON(int(status.Code), status.Message)
 		return
 	}
 

@@ -46,9 +46,9 @@ func (rs *RpcServer) Connect(addr string) {
 }
 
 func (rs *RpcServer) CreateUser(ctx context.Context, req *generated.CreateUserReq) (*generated.CreateUserResp, error) {
-	user, err := rs.us.CreateUser((*models.User)(req.User))
-	if err != nil {
-		return nil, err
+	user, status := rs.us.CreateUser((*models.User)(req.User))
+	if status != nil {
+		return nil, status.RPC()
 	}
 
 	return &generated.CreateUserResp{
@@ -57,9 +57,9 @@ func (rs *RpcServer) CreateUser(ctx context.Context, req *generated.CreateUserRe
 }
 
 func (rs *RpcServer) UpdateUser(ctx context.Context, req *generated.UpdateUserReq) (*generated.UpdateUserResp, error) {
-	user, err := rs.us.UpdateUser((*models.User)(req.User))
-	if err != nil {
-		return nil, err
+	user, status := rs.us.UpdateUser((*models.User)(req.User))
+	if status != nil {
+		return nil, status.RPC()
 	}
 
 	return &generated.UpdateUserResp{
@@ -68,18 +68,18 @@ func (rs *RpcServer) UpdateUser(ctx context.Context, req *generated.UpdateUserRe
 }
 
 func (rs *RpcServer) DeleteUser(ctx context.Context, req *generated.DeleteUserReq) (*generated.DeleteUserResp, error) {
-	err := rs.us.RemoveUser(req.UserId)
-	if err != nil {
-		return nil, err
+	status := rs.us.RemoveUser(req.UserId)
+	if status != nil {
+		return nil, status.RPC()
 	}
 
 	return &generated.DeleteUserResp{}, nil
 }
 
 func (rs *RpcServer) GetUser(ctx context.Context, req *generated.GetUserReq) (*generated.GetUserResp, error) {
-	user, err := rs.us.GetUser(req.UserId)
-	if err != nil {
-		return nil, err
+	user, status := rs.us.GetUser(req.UserId)
+	if status != nil {
+		return nil, status.RPC()
 	}
 
 	return &generated.GetUserResp{
@@ -88,15 +88,18 @@ func (rs *RpcServer) GetUser(ctx context.Context, req *generated.GetUserReq) (*g
 }
 
 func (rs *RpcServer) GetUserList(req *generated.GetUserListReq, stream generated.UserService_GetUserListServer) (error) {
-	users, err := rs.us.GetUserList(int(req.Limit), int(req.Skip), req.Filter)
-	if err != nil {
-		return err
+	users, status := rs.us.GetUserList(int(req.Limit), int(req.Skip), req.Filter)
+	if status != nil {
+		return status.RPC()
 	}
 
 	for _, user := range(users) {
-		err = stream.Send(&generated.GetUserListResp{
+		err := stream.Send(&generated.GetUserListResp{
 			User: (*generated.User)(user),
 		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

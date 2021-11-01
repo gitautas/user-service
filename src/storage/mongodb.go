@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"net/http"
 	"time"
 	"user-service/src/models"
 
@@ -14,13 +14,13 @@ import (
 )
 
 type Database interface {
-	Connect() error
-	Disconnect() error
-	CreateUser(user *models.User) error
-	UpdateUser(user *models.User) error
-	DeleteUser(userID string) error
-	GetUser(userID string) (user *models.User, err error)
-	GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, err error)
+	Connect() *models.Status
+	Disconnect() *models.Status
+	CreateUser(user *models.User) *models.Status
+	UpdateUser(user *models.User) *models.Status
+	DeleteUser(userID string) *models.Status
+	GetUser(userID string) (user *models.User, err *models.Status)
+	GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, err *models.Status)
 }
 
 type Mongo struct {
@@ -41,83 +41,81 @@ func NewMongo(endpoint string, dbname string, collection string, timeout time.Du
 	}
 }
 
-func (m *Mongo) Connect() error {
+func (m *Mongo) Connect() *models.Status {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.endpoint))
 	if err != nil {
-		return err
+		return models.NewStatus(http.StatusInternalServerError, "could not connect to database")
 	}
 
 	m.client = client
 	err = m.client.Ping(ctx, readpref.Primary()) // Establish and check connection
 	if err != nil {
-		return err
+		return models.NewStatus(http.StatusInternalServerError, "could not ping database")
 	}
 
 	m.collection = client.Database(m.dbName).Collection(m.collectionName)
 	return nil
 }
 
-func (m *Mongo) Disconnect() error {
+func (m *Mongo) Disconnect() *models.Status {
 	if m.client != nil {
-		return m.client.Disconnect(context.TODO())
+		err := m.client.Disconnect(context.TODO())
+		if err != nil {
+			return models.NewStatus(http.StatusInternalServerError, "could not disconnect from database")
+		}
 	}
 	return nil
 }
 
-func (m *Mongo) CreateUser(user *models.User) error {
+func (m *Mongo) CreateUser(user *models.User) *models.Status {
 	bUser, err := bson.Marshal(user)
 	if err != nil {
-		println("shite")
-		return err
+		return models.NewStatus(http.StatusBadRequest, "could not parse user")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 	_, err = m.collection.InsertOne(ctx, bUser)
 	if err != nil {
-		return err
+		return models.NewStatus(http.StatusInternalServerError, "could not create user")
 	}
 	return nil
 }
 
-func (m *Mongo) UpdateUser(user *models.User) error {
+func (m *Mongo) UpdateUser(user *models.User) *models.Status {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 	_, err := m.collection.UpdateOne(ctx, bson.M{"id": user.Id}, bson.M{"$set": user})
 	if err != nil {
-		return err
+		return models.NewStatus(http.StatusInternalServerError, "could not update user")
 	}
 	return nil
 }
 
-func (m *Mongo) DeleteUser(userID string) error {
+func (m *Mongo) DeleteUser(userID string) *models.Status {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 	_, err := m.collection.DeleteOne(ctx, bson.M{"id": userID})
 	if err != nil {
-		return err
+		return models.NewStatus(http.StatusInternalServerError, "could not delete user")
 	}
 	return nil
 }
 
-func (m *Mongo) GetUser(userID string) (user *models.User, err error) {
+func (m *Mongo) GetUser(userID string) (user *models.User, status *models.Status) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 	result := m.collection.FindOne(ctx, bson.M{"id": userID})
-	err = result.Decode(&user)
+	err := result.Decode(&user)
 	if err != nil {
-		return nil, err
+		return nil, models.NewStatus(http.StatusNotFound, "user not found")
 	}
 
-	if user == nil {
-		return nil, errors.New("user not found")
-	}
-
-	return user, err
+	return user, nil
 }
 
-func (m *Mongo) GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, err error) {
+func (m *Mongo) GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, status *models.Status) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	defer cancel()
 
@@ -134,14 +132,14 @@ func (m *Mongo) GetUserList(limit int, skip int, filter map[string]string) (user
 
 	cur, err := m.collection.Find(ctx, bFilter, opts)
 	if err != nil {
-		return nil, err
+		return nil, models.NewStatus(http.StatusInternalServerError, "could not query database")
 	}
 
 	for cur.Next(ctx) {
 		var user *models.User
 		err = cur.Decode(&user)
 		if err != nil {
-			return nil, err
+			return nil, models.NewStatus(http.StatusInternalServerError, "database error")
 		}
 		users = append(users, user)
 	}
@@ -150,5 +148,5 @@ func (m *Mongo) GetUserList(limit int, skip int, filter map[string]string) (user
 		return []*models.User{}, nil
 	}
 
-	return users, err
+	return users, nil
 }

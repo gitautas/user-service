@@ -14,63 +14,64 @@ func NewMongoMock() *MongoMock {
 	return &MongoMock{}
 }
 
-func (m *MongoMock) Connect() error {
+func (m *MongoMock) Connect() *models.Status {
 	args := m.Called()
 
 	result := args.Get(0)
-	if result == nil {
-		return nil
+	status, ok := result.(*models.Status)
+	if ok {
+		return status
 	}
 
-	return args.Error(0)
+	return nil
 }
 
-func (m *MongoMock) Disconnect() error {
+func (m *MongoMock) Disconnect() *models.Status {
 	args := m.Called()
-
 	result := args.Get(0)
-	if result == nil {
-		return nil
+	status, ok := result.(*models.Status)
+	if ok {
+		return status
 	}
 
-	return args.Error(0)
+	return nil
 }
 
-func (m *MongoMock) CreateUser(user *models.User) error {
-	args := m.Called()
-
+func (m *MongoMock) CreateUser(user *models.User) *models.Status {
+	args := m.Called(user)
 	result := args.Get(0)
-	if result == nil {
-		return nil
+	status, ok := result.(*models.Status)
+	if ok {
+		return status
 	}
 
-	return args.Error(0)
+	return nil
 }
 
-func (m *MongoMock) UpdateUser(user *models.User) error {
-	args := m.Called()
-
+func (m *MongoMock) UpdateUser(user *models.User) *models.Status {
+	args := m.Called(user)
 	result := args.Get(0)
-	if result == nil {
-		return nil
+	status, ok := result.(*models.Status)
+	if ok {
+		return status
 	}
 
-	return args.Error(0)
+	return nil
 }
 
-func (m *MongoMock) DeleteUser(userID string) error {
-	args := m.Called()
-
+func (m *MongoMock) DeleteUser(userID string) *models.Status {
+	args := m.Called(userID)
 	result := args.Get(0)
-	if result == nil {
-		return nil
+	status, ok := result.(*models.Status)
+	if ok {
+		return status
 	}
 
-	return args.Error(0)
+	return nil
 }
 
-func (m *MongoMock) GetUser(userID string) (file *models.User, err error) {
-	args := m.Called()
+func (m *MongoMock) GetUser(userID string) (user *models.User, err *models.Status) {
+	args := m.Called(userID)
 
 	result := args.Get(0)
 	user, ok := result.(*models.User)
@@ -78,11 +79,11 @@ func (m *MongoMock) GetUser(userID string) (file *models.User, err error) {
 		return user, nil
 	}
 
-	return nil, args.Error(1)
+	return nil, args.Get(1).(*models.Status)
 }
 
-func (m *MongoMock) GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, err error) {
-	args := m.Called()
+func (m *MongoMock) GetUserList(limit int, skip int, filter map[string]string) (users []*models.User, err *models.Status) {
+	args := m.Called(limit, skip, filter)
 
 	result := args.Get(0)
 	users, ok := result.([]*models.User)
@@ -90,5 +91,5 @@ func (m *MongoMock) GetUserList(limit int, skip int, filter map[string]string) (
 		return users, nil
 	}
 
-	return nil, args.Error(1)
+	return nil, args.Get(1).(*models.Status)
 }

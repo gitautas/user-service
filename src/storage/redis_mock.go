@@ -18,13 +18,14 @@ func (r *RedisMock) Connect() {
 	return
 }
 
-func (r *RedisMock) PublishMessage(event string, user *models.User) error {
-	args := r.Called()
+func (r *RedisMock) PublishMessage(event string, user *models.User) *models.Status {
+	args := r.Called(event, user)
 
 	result := args.Get(0)
-	if result == nil {
-		return nil
+	status, ok := result.(*models.Status)
+	if ok {
+		return status
 	}
 
-	return args.Error(0)
+	return nil
 }

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"sync"
 	"time"
 	"user-service/src/models"
@@ -12,7 +13,7 @@ import (
 
 type PubSub interface {
     Connect()
-	PublishMessage(event string, user *models.User) error
+	PublishMessage(event string, user *models.User) *models.Status
 }
 
 type Redis struct {
@@ -41,17 +42,18 @@ func (r *Redis) Connect() {
 }
 
 
-func (r *Redis) PublishMessage(event string, user *models.User) error {
+func (r *Redis) PublishMessage(event string, user *models.User) *models.Status {
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
 
-	message, err := json.Marshal(&models.PubSubMessage{
+	message, _ := json.Marshal(&models.PubSubMessage{
 		Message: event,
 		User: user,
 	})
+
+	err := r.client.Publish(ctx, "user", message).Err()
 	if err != nil {
-		return err
+		return models.NewStatus(http.StatusInternalServerError, "could not publish message")
 	}
-	r.client.Publish(ctx, "user", message)
 	return nil
 }
