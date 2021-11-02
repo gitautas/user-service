@@ -46,13 +46,14 @@ func (m *Mongo) Connect() *models.Status {
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.endpoint))
 	if err != nil {
-		return models.NewStatus(http.StatusInternalServerError, "could not connect to database")
+		return models.NewStatus(http.StatusInternalServerError, err.Error())
 	}
 
 	m.client = client
+	fmt.Println("Pinging MongoDB")
 	err = m.client.Ping(ctx, readpref.Primary()) // Establish and check connection
 	if err != nil {
-		return models.NewStatus(http.StatusInternalServerError, "could not ping database")
+		return models.NewStatus(http.StatusInternalServerError, err.Error())
 	}
 
 	m.collection = client.Database(m.dbName).Collection(m.collectionName)

@@ -32,7 +32,7 @@ func main() {
 	db := storage.NewMongo(mongoEndpoint, mongoDBName, mongoCollectionName, queryTimeout)
 	err := db.Connect()
 	if err != nil {
-		panic(fmt.Errorf("rror initializing mongodb: %v", err))
+		panic(fmt.Errorf("error initializing mongodb: %v", err.Message))
 	}
 
 	pubSub := storage.NewRedis(redisEndpoint, queryTimeout) // Using same timeout for brevity

@@ -8,6 +8,7 @@ services:
       - MONGO_INITDB_DATABASE=${MONGO_DATABASE}
     volumes:
       - ./db/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    command: --quiet
   redis:
     image: redis
     ports:
@@ -16,12 +17,14 @@ services:
     container_name: user-service
     env_file:
       - .env
+    environment:
+      MONGO_ENDPOINT: "mongodb://owner:test@db:27017/faceit"
+      REDIS_ENDPOINT: "redis:6379"
     build:
       context: .
     ports:
       - 3000:3000
     restart: unless-stopped
     depends_on:
-      - redis
       - db
-
+      - redis
