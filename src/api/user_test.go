@@ -278,7 +278,7 @@ func (s *UserServiceTestSuite) TestGetUserList() {
 
 	limit := 10
 	offset := 10
-	filter  := make(map[string]string)
+	filter := make(map[string]string)
 
 	s.mongoMock.On("GetUserList", limit, offset, filter).Return(expectedUsers)
 
@@ -294,7 +294,7 @@ func (s *UserServiceTestSuite) TestGetUserList() {
 func (s *UserServiceTestSuite) TestGetUserListErr() {
 	limit := 10
 	offset := 10
-	filter  := make(map[string]string)
+	filter := make(map[string]string)
 
 	s.mongoMock.On("GetUserList", limit, offset, filter).Return(nil, models.NewStatus(http.StatusInternalServerError, "failed to get user list"))
 

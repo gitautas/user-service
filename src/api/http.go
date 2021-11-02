@@ -15,10 +15,10 @@ import (
 // Not handling auth or resource checking as per requirements.
 
 type HttpRouter struct {
-	Engine *gin.Engine
-	Address string
+	Engine        *gin.Engine
+	Address       string
 	healthChannel chan health.HealthCheckResponse_ServingStatus
-	us *UserService
+	us            *UserService
 }
 
 const PathPrefix = "/user"
@@ -26,8 +26,8 @@ const PathPrefix = "/user"
 func NewHttpRouter(userService *UserService, healthChan chan health.HealthCheckResponse_ServingStatus) *HttpRouter {
 	engine := gin.Default()
 	hr := &HttpRouter{
-		Engine: engine,
-		us: userService,
+		Engine:        engine,
+		us:            userService,
 		healthChannel: healthChan,
 	}
 
@@ -70,7 +70,6 @@ func (hr *HttpRouter) createUserHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
 
 	user, status := hr.us.CreateUser(user)
 	if status != nil {

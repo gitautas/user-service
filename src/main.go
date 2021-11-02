@@ -40,8 +40,8 @@ func main() {
 
 	userService := api.NewUserService(db, pubSub)
 
-	httpRouter       := api.NewHttpRouter(userService, healthServer.HealthChan)
-	rpcServer        := api.NewRpcServer(userService, healthServer.HealthChan)
+	httpRouter := api.NewHttpRouter(userService, healthServer.HealthChan)
+	rpcServer := api.NewRpcServer(userService, healthServer.HealthChan)
 
 	go httpRouter.Connect(httpAddr)
 	go rpcServer.Connect(rpcAddr)

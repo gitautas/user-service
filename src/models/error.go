@@ -8,13 +8,13 @@ import (
 )
 
 type Status struct {
-  Code int32
-  Message string
+	Code    int32
+	Message string
 }
 
 func NewStatus(code int32, message string) *Status {
 	return &Status{
-		Code: code,
+		Code:    code,
 		Message: message,
 	}
 }

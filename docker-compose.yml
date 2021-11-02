@@ -12,3 +12,16 @@ services:
     image: redis
     ports:
      - 6379:6379
+  service:
+    container_name: user-service
+    env_file:
+      - .env
+    build:
+      context: .
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - db
+

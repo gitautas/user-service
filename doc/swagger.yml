@@ -1,0 +1,142 @@
+openapi: 3.0.1
+info:
+  title: FaceIT User Service
+  description: A demo user service API.
+  version: '0.1'
+servers:
+  - url: http://127.0.0.1:3000
+paths:
+  /user/create:
+    post:
+      description: Creates a user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                country:
+                  type: string
+                password:
+                  type: string
+                nickname:
+                  type: string
+                last_name:
+                  type: string
+                first_name:
+                  type: string
+                email:
+                  type: string
+            examples:
+              '0':
+                value: |-
+                  {
+                    "first_name":"Alice",
+                    "last_name":"Bob",
+                    "nickname":"AB123",
+                    "password":"supersecurepassword",
+                    "email":"alice@bob.com",
+                    "country":"UK"
+                  }
+      responses:
+        '200':
+          description: User created successfuly
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+  /user/{userId}:
+    parameters:
+      - in: path
+        name: userId
+        schema:
+          type: string
+        required: true
+        description: UUID of the user to get
+    put:
+      description: Update the user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                country:
+                  type: string
+                nickname:
+                  type: string
+                last_name:
+                  type: string
+                first_name:
+                  type: string
+                email:
+                  type: string
+            examples:
+              '0':
+                value: |-
+                  {
+                    "first_name":"Alice",
+                    "last_name":"Borque",
+                    "nickname":"AB123",
+                    "email":"alice@bob.com",
+                    "country":"UK"
+                  }
+      responses:
+        '200':
+          description: User updated succesfully
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+    delete:
+      description: Auto generated using Swagger Inspector
+      responses:
+        '200':
+          description: Auto generated using Swagger Inspector
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+    get:
+      description: Auto generated using Swagger Inspector
+      responses:
+        '200':
+          description: Auto generated using Swagger Inspector
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+  /user/:
+    parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        required: false
+        description: How many results to return per page
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        required: false
+        description: How much to offset the results(processed user count)
+      - in: query
+        name: first_name
+        schema:
+          type: string
+        required: false
+        description: First name filter
+    get:
+      description: Auto generated using Swagger Inspector
+      responses:
+        '200':
+          description: Auto generated using Swagger Inspector
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}

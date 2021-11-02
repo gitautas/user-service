@@ -12,35 +12,34 @@ import (
 )
 
 type PubSub interface {
-    Connect()
+	Connect()
 	PublishMessage(event string, user *models.User) *models.Status
 }
 
 type Redis struct {
-    endpoint string
-	client *redis.Client
+	endpoint    string
+	client      *redis.Client
 	pubSubMutex *sync.Mutex
-	pubSubChan chan *models.PubSubMessage
-	timeout time.Duration
+	pubSubChan  chan *models.PubSubMessage
+	timeout     time.Duration
 }
 
 func NewRedis(endpoint string, timeout time.Duration) *Redis {
 	return &Redis{
-		endpoint:   endpoint,
+		endpoint:    endpoint,
 		pubSubMutex: &sync.Mutex{},
 		pubSubChan:  make(chan *models.PubSubMessage),
-		timeout: timeout,
+		timeout:     timeout,
 	}
 }
 
 func (r *Redis) Connect() {
 	client := redis.NewClient(&redis.Options{
-		Addr:    r.endpoint,
+		Addr: r.endpoint,
 	})
 
 	r.client = client
 }
-
 
 func (r *Redis) PublishMessage(event string, user *models.User) *models.Status {
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
@@ -48,7 +47,7 @@ func (r *Redis) PublishMessage(event string, user *models.User) *models.Status {
 
 	message, _ := json.Marshal(&models.PubSubMessage{
 		Message: event,
-		User: user,
+		User:    user,
 	})
 
 	err := r.client.Publish(ctx, "user", message).Err()

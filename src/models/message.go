@@ -8,5 +8,5 @@ const (
 
 type PubSubMessage struct {
 	Message string `json:"message"`
-	User *User `json:"user"`
+	User    *User  `json:"user"`
 }

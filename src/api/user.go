@@ -11,15 +11,15 @@ import (
 // This is where our main business logic lives!
 
 type IUserService interface {
-    CreateUser(user *models.User, db storage.Database, pubSub storage.PubSub) (*models.User, *models.Status)
-	UpdateUser(user *models.User, db storage.Database, pubSub storage.PubSub) (*models.User, *models.Status)
-	RemoveUser(userID string, db storage.Database, pubSub storage.PubSub) *models.Status
-	GetUser(userID string, db storage.Database) (user *models.User, status *models.Status)
-	GetUserList(limit int, offset int, filter map[string]string, db storage.Database) (users []*models.User, status *models.Status)
+	CreateUser(user *models.User) (*models.User, *models.Status)
+	UpdateUser(user *models.User) (*models.User, *models.Status)
+	RemoveUser(userID string) *models.Status
+	GetUser(userID string) (user *models.User, status *models.Status)
+	GetUserList(limit int, offset int, filter map[string]string) (users []*models.User, status *models.Status)
 }
 
 type UserService struct {
-    db storage.Database
+	db     storage.Database
 	pubSub storage.PubSub
 }
 
@@ -29,7 +29,6 @@ func NewUserService(db storage.Database, pubSub storage.PubSub) *UserService {
 		pubSub: pubSub,
 	}
 }
-
 
 func (us *UserService) CreateUser(user *models.User) (*models.User, *models.Status) {
 	user.Password = user.HashPassword(user.Password)

@@ -13,7 +13,7 @@ import (
 
 type RpcServer struct {
 	Server *grpc.Server
-	us *UserService
+	us     *UserService
 	generated.UnimplementedUserServiceServer
 	healthChannel chan health.HealthCheckResponse_ServingStatus
 }
@@ -22,8 +22,8 @@ func NewRpcServer(userService *UserService, healthChan chan health.HealthCheckRe
 	server := grpc.NewServer()
 
 	rpcServer := &RpcServer{
-		Server: server,
-		us: userService,
+		Server:        server,
+		us:            userService,
 		healthChannel: healthChan,
 	}
 
@@ -87,13 +87,13 @@ func (rs *RpcServer) GetUser(ctx context.Context, req *generated.GetUserReq) (*g
 	}, nil
 }
 
-func (rs *RpcServer) GetUserList(req *generated.GetUserListReq, stream generated.UserService_GetUserListServer) (error) {
+func (rs *RpcServer) GetUserList(req *generated.GetUserListReq, stream generated.UserService_GetUserListServer) error {
 	users, status := rs.us.GetUserList(int(req.Limit), int(req.Skip), req.Filter)
 	if status != nil {
 		return status.RPC()
 	}
 
-	for _, user := range(users) {
+	for _, user := range users {
 		err := stream.Send(&generated.GetUserListResp{
 			User: (*generated.User)(user),
 		})
