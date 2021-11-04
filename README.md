@@ -29,7 +29,7 @@ docker-compose up
 ```
 
 ## Choices taken, assumptions made
-I decided to use MongoDB, as after implementing MySQL first, I realised that this would be a perfect opportunity my ability to learn quickly, this service being my first experience with a NoSQL database.
+I decided to use MongoDB, as after implementing MySQL first, I realised that this would be a perfect opportunity to show off my ability to learn quickly, this service being my first experience with a NoSQL database.
 I decided to use Redis as my pubsub, as it is simple and does the job.
 I decided to use Gin as my HTTP framework, mainly because I wasn't knowledgeable enough about gRPC, Gin is a great framework for REST, but when I also have gRPC endpoints my controller logic ended up split between the two. The gRPC and REST APIs are different because of this.
 
